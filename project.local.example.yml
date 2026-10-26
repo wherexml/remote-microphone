@@ -1,0 +1,13 @@
+# 复制为 project.local.yml，替换 Team ID 与唯一 Bundle ID；本地文件已被 Git 忽略。
+include: project.yml
+targets:
+  RemoteMicPhone:
+    settings:
+      base:
+        DEVELOPMENT_TEAM: YOUR_TEAM_ID
+        PRODUCT_BUNDLE_IDENTIFIER: com.yourname.remotemicrophone.phone
+  RemoteMicMac:
+    settings:
+      base:
+        DEVELOPMENT_TEAM: YOUR_TEAM_ID
+        PRODUCT_BUNDLE_IDENTIFIER: com.yourname.remotemicrophone.mac

@@ -1,0 +1,20 @@
+# 本机构建、诊断、录音、配对和签名配置
+build/
+artifacts/
+private/
+*.xcodeproj/
+project.local.yml
+.env
+.env.*
+*.xcuserstate
+xcuserdata/
+*.mobileprovision
+*.p12
+*.p8
+*.key
+*.pem
+*.wav
+*.m4a
+*.pcm
+__pycache__/
+.DS_Store

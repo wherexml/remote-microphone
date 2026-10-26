@@ -1,0 +1,65 @@
+name: RemoteMic
+options:
+  bundleIdPrefix: com.example.remotemicrophone
+  deploymentTarget:
+    iOS: '17.0'
+    macOS: '14.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    CODE_SIGN_STYLE: Automatic
+targets:
+  RemoteMicPhone:
+    type: application
+    platform: iOS
+    sources: [Shared, iOS]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.remotemicrophone.phone
+        PRODUCT_NAME: RemoteMicPhone
+        TARGETED_DEVICE_FAMILY: '1,2'
+        SDKROOT: iphoneos
+        SUPPORTED_PLATFORMS: 'iphoneos iphonesimulator'
+        IPHONEOS_DEPLOYMENT_TARGET: '17.0'
+        CODE_SIGN_IDENTITY: Apple Development
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: build/Phone-Info.plist
+      properties:
+        CFBundleDisplayName: Remote Microphone
+        CFBundleName: Remote Microphone
+        CFBundleShortVersionString: '0.1.0'
+        CFBundleVersion: '4'
+        NSMicrophoneUsageDescription: 将你的声音传送到已配对的 Mac。
+        NSLocalNetworkUsageDescription: 连接你的 Mac 并传送麦克风声音。
+        UIBackgroundModes: [audio]
+        UILaunchScreen: {}
+        CFBundleURLTypes:
+          - CFBundleURLSchemes: [remotemic]
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+  RemoteMicMac:
+    type: application
+    platform: macOS
+    sources: [Shared, Mac]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.remotemicrophone.mac
+        PRODUCT_NAME: RemoteMic
+        ENABLE_HARDENED_RUNTIME: YES
+        SDKROOT: macosx
+        SUPPORTED_PLATFORMS: macosx
+        MACOSX_DEPLOYMENT_TARGET: '14.0'
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: Apple Development
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: build/Mac-Info.plist
+      properties:
+        CFBundleDisplayName: Remote Microphone
+        CFBundleName: Remote Microphone
+        CFBundleShortVersionString: '0.1.0'
+        CFBundleVersion: '4'
+        NSLocalNetworkUsageDescription: 接收你已配对的 iPhone 麦克风声音。
+        NSMicrophoneUsageDescription: 验证远程麦克风音频输入。
