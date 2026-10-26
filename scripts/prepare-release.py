@@ -83,7 +83,9 @@ def verify_app(app, config, work):
     if set(archs) != {'arm64', 'x86_64'}:
         raise RuntimeError('Mac 安装包必须包含 arm64 和 x86_64。')
     entitlements = run('codesign', '-d', '--entitlements', ':-', app).stdout
-    if 'com.apple.security.get-task-allow' in entitlements:
+    xml_start = entitlements.find('<?xml')
+    values = plistlib.loads(entitlements[xml_start:].encode()) if xml_start >= 0 else {}
+    if values.get('com.apple.security.get-task-allow', False):
         raise RuntimeError('分发 App 不应包含调试权限。')
     return info
 
@@ -139,7 +141,8 @@ def main():
             '-derivedDataPath', work / 'MacBuild', 'ARCHS=arm64 x86_64',
             'CODE_SIGN_STYLE=Manual', f'CODE_SIGN_IDENTITY={args.identity}', f'DEVELOPMENT_TEAM={args.team}',
             f'PRODUCT_BUNDLE_IDENTIFIER={args.mac_bundle_id}', 'ENABLE_HARDENED_RUNTIME=YES',
-            'OTHER_CODE_SIGN_FLAGS=--timestamp', 'build', cwd=source, log=work / 'mac-build.log')
+            'CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO', 'OTHER_CODE_SIGN_FLAGS=--timestamp',
+            'build', cwd=source, log=work / 'mac-build.log')
         if app.exists():
             shutil.rmtree(app)
         run('ditto', work / 'MacBuild/Build/Products/Release/Remote Microphone.app', app)
@@ -199,7 +202,9 @@ def main():
         run('xcrun', 'stapler', 'staple', dmg, log=work / 'dmg-staple.log')
         state['dmg_stapled'] = True
         save(state_path, state)
-    verify_app(app, config, work)
+    final_info = verify_app(app, config, work)
+    if final_info['CFBundleShortVersionString'] != version or final_info['CFBundleVersion'] != state['build']:
+        raise RuntimeError('最终 App 版本与构建记录不符。')
     for name, target in [('app', app), ('dmg', dmg)]:
         run('xcrun', 'stapler', 'validate', target, log=work / f'{name}-ticket.log')
         if json.loads((work / f'{name}-notary.json').read_text())['status'] != 'Accepted':
