@@ -36,11 +36,17 @@ final class PhoneMic: ObservableObject {
         })
         observers.append(center.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: nil, queue: .main) { [weak self] _ in self?.stop("音频服务已重置，请重新开始") })
     }
-    func pair(_ url: String) {
-        guard !active else { status = "请先停止录音再配对"; return }
-        guard let p = Pairing.parse(url) else { status = "配对链接无效"; return }
-        do { try PairStore.save(p); pairing = p; status = "已配对" }
-        catch { status = error.localizedDescription }
+    @discardableResult
+    func pair(_ url: String) -> Bool {
+        guard !active else { status = "请先停止录音再配对"; return false }
+        guard let p = Pairing.parse(url) else {
+            status = url.trimmingCharacters(in: .whitespacesAndNewlines).contains("://")
+                ? "配对链接无效，请重新从 Mac 复制"
+                : "请粘贴完整配对链接，不能只填 IP 地址"
+            return false
+        }
+        do { try PairStore.save(p); pairing = p; status = "已配对"; return true }
+        catch { status = error.localizedDescription; return false }
     }
     func start() {
         guard !active, let pairing else { return }
@@ -151,6 +157,13 @@ struct PhoneView: View {
     @ObservedObject var mic: PhoneMic
     @State private var showPairing = false
     @State private var pairingText = ""
+    @State private var scanning = false
+    @State private var pairingError: String?
+    private var pairedAddress: String {
+        guard let pairing = mic.pairing else { return "" }
+        let host = pairing.host.contains(":") && !pairing.host.hasPrefix("[") ? "[\(pairing.host)]" : pairing.host
+        return "\(host):\(pairing.port)"
+    }
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
@@ -158,14 +171,19 @@ struct PhoneView: View {
                     HStack(spacing: 12) {
                         Text(MicAppearance.name).font(.system(size: 20, weight: .semibold)).tracking(-0.6).lineLimit(1).minimumScaleFactor(0.85)
                         Spacer(minLength: 8)
-                        Button { showPairing = true } label: { Image(systemName: "qrcode") }
-                            .buttonStyle(MicIconButtonStyle()).accessibilityLabel("配对")
+                        Button { pairingError = nil; showPairing = true } label: { Image(systemName: "qrcode") }
+                            .buttonStyle(MicIconButtonStyle()).accessibilityLabel("配对").disabled(mic.active)
                     }
                     Text(mic.muted ? "Mac 已静音" : mic.status)
                         .font(.system(size: 15)).foregroundStyle(MicAppearance.muted).padding(.top, 65)
                     Text(mic.pairing?.name ?? "连接 Mac")
                         .font(.system(size: 28, weight: .semibold)).tracking(-0.6)
                         .padding(.top, 12).lineLimit(2)
+                    if mic.pairing != nil {
+                        Text(pairedAddress).font(.system(size: 14, design: .monospaced))
+                            .foregroundStyle(MicAppearance.muted).textSelection(.enabled)
+                            .padding(.top, 8).accessibilityLabel("Mac 地址：\(pairedAddress)")
+                    }
                     MicWaveform(level: mic.meter, active: mic.active && !mic.muted)
                         .padding(.vertical, 50)
                     Button { mic.active ? mic.stop() : mic.start() } label: {
@@ -190,11 +208,31 @@ struct PhoneView: View {
             .sheet(isPresented: $showPairing) {
                 NavigationStack {
                     Form {
-                        TextField("配对链接", text: $pairingText).textInputAutocapitalization(.never).autocorrectionDisabled()
-                        Button("配对") { mic.pair(pairingText); pairingText = ""; showPairing = false }
-                    }.navigationTitle("连接 Mac").toolbar { Button("取消") { showPairing = false } }
+                        if let pairing = mic.pairing {
+                            Section("当前配对") {
+                                LabeledContent("Mac", value: pairing.name)
+                                LabeledContent("地址") { Text(pairedAddress).textSelection(.enabled) }
+                            }
+                        }
+                        Button { scanning = true } label: { Label("扫描二维码", systemImage: "qrcode.viewfinder") }
+                        TextField("粘贴完整配对链接", text: $pairingText).textInputAutocapitalization(.never).autocorrectionDisabled()
+                        Button("配对") { applyPairing(pairingText) }
+                        if let pairingError { Text(pairingError).foregroundStyle(.red) }
+                    }.navigationTitle("连接 Mac").toolbar { Button("完成") { showPairing = false } }
                 }.tint(MicAppearance.blue).preferredColorScheme(.light)
+                .fullScreenCover(isPresented: $scanning) {
+                    PairScanner { value in
+                        guard Pairing.parse(value) != nil else { return false }
+                        scanning = false
+                        applyPairing(value)
+                        return true
+                    }
+                }
             }
+    }
+    private func applyPairing(_ value: String) {
+        if mic.pair(value) { pairingText = ""; pairingError = nil }
+        else { pairingError = mic.status }
     }
 }
 

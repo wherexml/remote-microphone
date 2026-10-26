@@ -29,8 +29,9 @@ targets:
       properties:
         CFBundleDisplayName: Remote Microphone
         CFBundleName: Remote Microphone
-        CFBundleShortVersionString: '0.1.0'
-        CFBundleVersion: '4'
+        CFBundleShortVersionString: '0.1.1'
+        CFBundleVersion: '5'
+        NSCameraUsageDescription: 扫描 Mac 上的二维码，安全配对远程麦克风。
         NSMicrophoneUsageDescription: 将你的声音传送到已配对的 Mac。
         NSLocalNetworkUsageDescription: 连接你的 Mac 并传送麦克风声音。
         UIBackgroundModes: [audio]
@@ -38,6 +39,7 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLSchemes: [remotemic]
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
   RemoteMicMac:
     type: application
     platform: macOS
@@ -59,7 +61,7 @@ targets:
       properties:
         CFBundleDisplayName: Remote Microphone
         CFBundleName: Remote Microphone
-        CFBundleShortVersionString: '0.1.0'
-        CFBundleVersion: '4'
+        CFBundleShortVersionString: '0.1.1'
+        CFBundleVersion: '5'
         NSLocalNetworkUsageDescription: 接收你已配对的 iPhone 麦克风声音。
         NSMicrophoneUsageDescription: 验证远程麦克风音频输入。

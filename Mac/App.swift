@@ -59,7 +59,7 @@ struct ReceiverView: View {
     private var pairingView: some View {
         VStack(spacing: 18) {
             HStack {
-                Text("连接 iPhone").font(.system(size: 18, weight: .semibold))
+                Text("连接 iPhone / iPad").font(.system(size: 18, weight: .semibold))
                 Spacer()
                 Button { pairingShown = false } label: { Image(systemName: "xmark") }
                     .buttonStyle(MicIconButtonStyle()).accessibilityLabel("关闭配对")
@@ -69,6 +69,7 @@ struct ReceiverView: View {
                     Image(nsImage: qr).interpolation(.none).resizable().frame(width: 180, height: 180)
                 }
             }
+            Text("Mac 网络地址").font(.caption).foregroundStyle(MicAppearance.muted)
             TextField("Mac 的 Tailscale IP 或域名", text: $host).textFieldStyle(.roundedBorder).disabled(receiver.active)
                 .onSubmit { receiver.updateHost(host) }
             HStack {

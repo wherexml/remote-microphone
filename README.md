@@ -10,7 +10,7 @@ Remote Microphone 是一套用 Swift / SwiftUI 编写的 iPhone 发送端和 Mac
 
 它不修改 UU 客户端，不依赖 UU 自带的远程麦克风支持，也不包含语音识别模型。UU 负责画面和控制，Remote Microphone 负责声音，文字识别由 Mac 上你选择的应用完成。
 
-> 当前为自行构建安装的开发版本。仓库未提供经过公证的正式安装包，也没有 App Store / TestFlight 下载。界面预览为设计 mock。
+> iOS 已提供受邀 TestFlight 内部测试；[公开测试链接](https://testflight.apple.com/join/sYSTytKh)已创建，2026-10-26 状态为等待 Apple 外部测试审核，通过前外部用户无法加入。Mac 目前按源码构建安装。安装与分发方式见 [Release 分发说明](docs/RELEASE.md)。界面预览为设计 mock。
 
 ## 界面预览
 

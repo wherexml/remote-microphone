@@ -1,6 +1,6 @@
 # Release 打包与分发
 
-首版使用 GitHub Release：Mac 提供 Developer ID 签名、Apple 公证的通用 DMG；iPhone 提供需使用者自行签名的 IPA。TestFlight 后续单独接入。
+GitHub Release：Mac 提供 Developer ID 签名、Apple 公证的通用 DMG；iPhone 提供需使用者自行签名的 IPA。TestFlight 使用独立的 App Store 分发签名与测试组配置。
 
 ## 用户安装
 
@@ -61,8 +61,24 @@ python3 scripts/draft-release.py build/releases/<commit 前 12 位> \
 
 首次正式发布还需完成浏览器下载、隔离属性、拖拽安装、原生启动与配对 / 接收验证，并将证据保存在 `artifacts/`。Apple 公证与编译通过不代表音频或手机签名安装已验收；Intel 包虽包含 x86_64，仍需标明是否做过 Intel 真机验证。
 
-## 后续 TestFlight
+## TestFlight
+
+2026-10-26：iOS 0.1.0（4）已完成上传及加密问卷，内部测试状态为 **Testing**。外部组 **Public Beta** 已加入该构建并提交 Beta App Review，状态为 **Waiting for Review**。
+
+公开链接：[加入 Remote Microphone 测试](https://testflight.apple.com/join/sYSTytKh)。设置为 Open to Anyone；Apple 页面明确提示本组获得已批准构建前，测试者不能通过公开链接加入。已启用新构建可用时自动通知测试者。
+
+iPhone 17 Pro Max / iOS 27.0.1 已通过内部邀请安装并启动该 TestFlight 构建；已完成配对、加密连接、后台音频传输及 BlackHole 独立录音检查，停止后接收断开且输入归零。当前网络为蜂窝 5G + Tailscale 中继；用户暂不便发声，因此真人语音清晰度和听写准确率未验收。
 
 使用固定 iOS Bundle ID 和 Apple 分发团队创建 App Store Connect 记录、归档上传，补齐隐私与测试说明，再安排外部测试。外部测试可能需要 Beta App Review；构建最长可测试 90 天。不能把 GitHub 上的 unsigned IPA 当成 TestFlight 构建。
+
+### 上传检查与恢复
+
+- 必须使用 Apple 当前接受的 Xcode / SDK。2026-10-26 实际上传拒绝了 Xcode 27 beta 4（27A5228h），不能把本地编译成功当成上传可用。通过 `DEVELOPER_DIR` 为单次构建指定正式工具链，无需修改全局 `xcode-select`。
+- iPhone 保持竖屏；iPad 的 `UISupportedInterfaceOrientations~ipad` 必须包含四个方向，以满足当前工程的 iPad 多任务声明。修改 `project.yml` 后重新运行 XcodeGen，不能只修补已签名 IPA。
+- 先在 App Store Connect 核对 Bundle ID 与 App 记录。Xcode 提示自动创建失败时，重新读取服务端页面，避免重复创建。
+- 没有登记设备会阻止普通 Development 归档，但不代表无法进行 App Store 分发。可先用 `CODE_SIGNING_ALLOWED=NO` 归档，再通过 `xcodebuild -exportArchive -allowProvisioningUpdates` 和 `method=app-store-connect`、`signingStyle=automatic`、正确 `teamID` 完成分发签名；签名凭证由 Xcode 管理，不导出私钥。
+- `destination=export` 只导出 IPA；`destination=upload` 才上传。上传成功后仍需等待 Apple 处理、回答加密合规问题、将构建加入测试组，并核对 TestFlight 页面状态。
+- 内部测试与公开外部测试分开处理。新增外部测试者、公开链接及 Beta App Review 均不因内部构建上传成功而自动完成。
+- 将归档、导出、上传日志和服务端最终截图留在 `artifacts/`；安装与音频真机验收另行记录。
 
 官方参考：[Apple 公证流程](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow)、[TestFlight 概览](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview/)。
