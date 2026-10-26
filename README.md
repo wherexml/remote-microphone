@@ -149,7 +149,7 @@ build/PhoneDerivedData/Build/Products/Debug-iphoneos/RemoteMicPhone.app
 scripts/build-local.sh --unsigned
 ```
 
-未签名构建不等于可以直接在真实 iPhone 上运行。项目没有包含发布、公证或商店上传流程。
+未签名构建不等于可以直接在真实 iPhone 上运行。Mac 公证 DMG 与 iPhone 自行签名 IPA 的打包步骤见 [Release 分发说明](docs/RELEASE.md)。
 
 ## 第一次配对与使用
 

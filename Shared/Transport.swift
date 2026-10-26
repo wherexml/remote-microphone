@@ -46,7 +46,10 @@ enum MicError: LocalizedError {
 }
 
 enum PairStore {
-    static let service = "cc.skylance.remotemic.pairing"
+    // Release builds opt into isolated storage; existing development installs
+    // retain their original pairing without migration or Keychain prompts.
+    static let namespace = Bundle.main.object(forInfoDictionaryKey: "RemoteMicStorageNamespace") as? String
+    static let service = namespace.map { $0 + ".pairing" } ?? "cc.skylance.remotemic.pairing"
     static func load() -> Pairing? {
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: "primary", kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitOne]
         var result: CFTypeRef?

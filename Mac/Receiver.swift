@@ -36,7 +36,8 @@ final class Receiver: ObservableObject {
         output.level = { [weak self] in self?.meter = $0 }
         diagnosticTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             guard let self else { return }
-            let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("RemoteMic/diagnostics.json")
+            let directory = PairStore.namespace ?? "RemoteMic"
+            let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(directory + "/diagnostics.json")
             try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             var info: [String: Any] = ["status":self.status,"connected":self.connected,"audio_frames":self.audioFrames,"last_packet_age":self.lastAge,"output_samples":self.output.receivedSamples,"output_drops":self.output.droppedPackets,"rendered_samples":self.output.renderedSamples,"meter":self.meter,"time":Date().timeIntervalSince1970]
             if let wire = self.wire { info["wire"] = wire.snapshot }
