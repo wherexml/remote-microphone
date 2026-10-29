@@ -25,14 +25,36 @@ struct Pairing: Codable {
         }
         return Pairing(host: host, key: bytes.map { String(format: "%02x", $0) }.joined(), name: name)
     }
-    var url: URL? {
-        guard !host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+    /// Payload for QR / paste links. Prefer the query form: system Camera and
+    /// some URL openers drop the fragment, which used to make a valid QR look
+    /// like a bare address after scanning.
+    private var payloadBase64: String? {
         guard let data = try? JSONEncoder().encode(self) else { return nil }
-        let b64 = data.base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
-        return URL(string: "remotemic://pair#" + b64)
+        return data.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
     }
+    var url: URL? {
+        guard !host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, let b64 = payloadBase64 else { return nil }
+        var components = URLComponents()
+        components.scheme = "remotemic"
+        components.host = "pair"
+        components.queryItems = [URLQueryItem(name: "p", value: b64)]
+        return components.url
+    }
+    /// Legacy fragment links (`remotemic://pair#…`) remain readable so older
+    /// Mac builds and already-copied paste strings still pair.
     static func parse(_ text: String) -> Pairing? {
-        guard let url = URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines)), url.scheme == "remotemic", url.host == "pair", var b64 = url.fragment else { return nil }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: trimmed), url.scheme == "remotemic", url.host == "pair" else { return nil }
+        let b64Source: String?
+        if let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems {
+            b64Source = items.first(where: { $0.name == "p" })?.value
+        } else {
+            b64Source = nil
+        }
+        guard var b64 = b64Source ?? url.fragment, !b64.isEmpty else { return nil }
         b64 = b64.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
         b64 += String(repeating: "=", count: (4 - b64.count % 4) % 4)
         guard let data = Data(base64Encoded: b64), let p = try? JSONDecoder().decode(Pairing.self, from: data), p.secret != nil, !p.host.isEmpty, p.port > 1024 else { return nil }

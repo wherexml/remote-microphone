@@ -18,7 +18,11 @@ struct ReceiverView: View {
                     .popover(isPresented: $pairingShown, arrowEdge: .bottom) { pairingView }
             }
             Text(receiver.phone).font(.system(size: 19, weight: .semibold)).padding(.top, 26)
-            Text(receiver.status).font(.system(size: 14)).foregroundStyle(MicAppearance.muted).padding(.top, 8)
+            MicStatusLabel(
+                status: receiver.status,
+                phase: MicLinkPhase.from(status: receiver.status, active: receiver.active, sending: receiver.status == "传送中" || receiver.status.hasPrefix("正在传送"), connected: receiver.connected),
+                level: receiver.meter
+            ).padding(.top, 8)
             MicWaveform(level: receiver.meter, active: receiver.connected && !receiver.muted)
                 .padding(.vertical, 28)
             HStack(spacing: 10) {
@@ -69,9 +73,13 @@ struct ReceiverView: View {
                     Image(nsImage: qr).interpolation(.none).resizable().frame(width: 180, height: 180)
                 }
             }
-            Text("Mac 网络地址").font(.caption).foregroundStyle(MicAppearance.muted)
+            Text("Mac 网络地址（不是配对链接）").font(.caption).foregroundStyle(MicAppearance.muted)
             TextField("Mac 的 Tailscale IP 或域名", text: $host).textFieldStyle(.roundedBorder).disabled(receiver.active)
                 .onSubmit { receiver.updateHost(host) }
+            if host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text("填写本机 Tailscale 地址后点保存，才会生成可扫描的二维码。")
+                    .font(.caption2).foregroundStyle(MicAppearance.muted).multilineTextAlignment(.leading)
+            }
             HStack {
                 Button("保存地址") { receiver.updateHost(host) }.disabled(receiver.active)
                 Spacer()

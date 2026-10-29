@@ -8,12 +8,12 @@ final class PhoneMic: ObservableObject {
     @Published var active = false
     @Published var meter: Float = 0
     @Published var muted = false
+    @Published private(set) var sending = false
     private var engine: AVAudioEngine?
     private var wire: Wire?
     private var epoch = 0
     private var retry: DispatchWorkItem?
     private var retryCount = 0
-    private var sending = false
     private var diagnostics: [String: Any] = [:]
     private var diagnosticTimer: Timer?
     private var observers: [NSObjectProtocol] = []
@@ -174,12 +174,21 @@ struct PhoneView: View {
                         Button { pairingError = nil; showPairing = true } label: { Image(systemName: "qrcode") }
                             .buttonStyle(MicIconButtonStyle()).accessibilityLabel("配对").disabled(mic.active)
                     }
-                    Text(mic.muted ? "Mac 已静音" : mic.status)
-                        .font(.system(size: 15)).foregroundStyle(MicAppearance.muted).padding(.top, 65)
-                    Text(mic.pairing?.name ?? "连接 Mac")
+                    MicStatusLabel(
+                        status: mic.status,
+                        phase: MicLinkPhase.from(status: mic.status, active: mic.active, sending: mic.sending),
+                        level: mic.meter,
+                        muted: mic.muted
+                    ).padding(.top, 65)
+                    Text({
+                        guard let pairing = mic.pairing, !pairing.host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                            return "连接 Mac"
+                        }
+                        return pairing.name.isEmpty ? "已配对的 Mac" : pairing.name
+                    }())
                         .font(.system(size: 28, weight: .semibold)).tracking(-0.6)
                         .padding(.top, 12).lineLimit(2)
-                    if mic.pairing != nil {
+                    if let pairing = mic.pairing, !pairing.host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         Text(pairedAddress).font(.system(size: 14, design: .monospaced))
                             .foregroundStyle(MicAppearance.muted).textSelection(.enabled)
                             .padding(.top, 8).accessibilityLabel("Mac 地址：\(pairedAddress)")
@@ -208,7 +217,7 @@ struct PhoneView: View {
             .sheet(isPresented: $showPairing) {
                 NavigationStack {
                     Form {
-                        if let pairing = mic.pairing {
+                        if let pairing = mic.pairing, !pairing.host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             Section("当前配对") {
                                 LabeledContent("Mac", value: pairing.name)
                                 LabeledContent("地址") { Text(pairedAddress).textSelection(.enabled) }
@@ -222,9 +231,18 @@ struct PhoneView: View {
                 }.tint(MicAppearance.blue).preferredColorScheme(.light)
                 .fullScreenCover(isPresented: $scanning) {
                     PairScanner { value in
-                        guard Pairing.parse(value) != nil else { return false }
+                        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard Pairing.parse(trimmed) != nil else {
+                            // Let PairScanner show a generic QR error; also seed the paste-panel hint.
+                            if !trimmed.contains("://") {
+                                pairingError = "请扫描 Mac 上的配对二维码，或粘贴完整配对链接（不能只填 IP）"
+                            } else {
+                                pairingError = "配对码无效，请确认 Mac 已保存网络地址后再扫"
+                            }
+                            return false
+                        }
                         scanning = false
-                        applyPairing(value)
+                        applyPairing(trimmed)
                         return true
                     }
                 }

@@ -82,3 +82,94 @@ struct MicWaveform: View {
         return min(1, max(0, (decibels + 60) / 42))
     }
 }
+
+/// Compact connection/send state glyph next to the status label.
+enum MicLinkPhase: Equatable {
+    case idle
+    case connecting
+    case sending
+    case error
+    static func from(status: String, active: Bool, sending: Bool = false, connected: Bool = false) -> MicLinkPhase {
+        let errorHints = ["失败", "中断", "超时", "无效", "不匹配", "请允许", "未安装", "请先", "请粘贴", "请扫描", "配对码无效", "配对链接无效"]
+        if errorHints.contains(where: { status.contains($0) }) { return .error }
+        if sending || status == "传送中" || status.hasPrefix("正在传送") { return .sending }
+        if status == "未连接" || status == "未启动" || status == "已停止" || status == "已配对" { return .idle }
+        if active || connected || status == "连接中" || status == "重新连接中" || status == "准备连接" || status == "等待连接" || status.hasPrefix("正在连接") || status.hasPrefix("正在重新连接") || status.hasPrefix("正在准备") {
+            return .connecting
+        }
+        return .idle
+    }
+}
+
+struct MicStatusIndicator: View {
+    let phase: MicLinkPhase
+    var level: Float = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var pulse = false
+    var body: some View {
+        Group {
+            switch phase {
+            case .idle:
+                Circle().fill(MicAppearance.idle).frame(width: 8, height: 8)
+            case .error:
+                Circle().fill(Color.red.opacity(0.85)).frame(width: 8, height: 8)
+            case .connecting:
+                Circle()
+                    .fill(MicAppearance.blue)
+                    .frame(width: 8, height: 8)
+                    .opacity(reduceMotion ? 1 : (pulse ? 0.25 : 1))
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: pulse)
+                    .onAppear { pulse = true }
+                    .onChange(of: phase) { _, _ in pulse = true }
+            case .sending:
+                HStack(spacing: 2) {
+                    ForEach(0..<3, id: \.self) { index in
+                        Capsule().fill(MicAppearance.blue)
+                            .frame(width: 3, height: barHeight(index))
+                    }
+                }
+                .frame(width: 14, height: 12)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: level)
+            }
+        }
+        .accessibilityHidden(true)
+    }
+    private func barHeight(_ index: Int) -> CGFloat {
+        let base: Float = reduceMotion ? 0.55 : max(0.2, min(1, level * 4 + 0.25))
+        let factor: Float = [0.55, 1.0, 0.7][index]
+        return CGFloat(4 + base * factor * 8)
+    }
+}
+
+struct MicStatusLabel: View {
+    let status: String
+    let phase: MicLinkPhase
+    var level: Float = 0
+    var muted: Bool = false
+    private var display: String {
+        if muted { return "Mac 已静音" }
+        switch status {
+        case "连接中": return "正在连接 Mac"
+        case "重新连接中": return "正在重新连接"
+        case "传送中": return "正在传送声音"
+        case "准备连接": return "正在准备连接"
+        case "等待连接": return "等待手机连接"
+        case "已连接": return "已连接，等待声音"
+        case "未连接": return "尚未连接"
+        case "未启动": return "接收未启动"
+        case "已配对": return "已配对，可以开始"
+        case "已停止": return "已停止"
+        default: return status
+        }
+    }
+    var body: some View {
+        HStack(spacing: 8) {
+            MicStatusIndicator(phase: phase, level: level)
+            Text(display)
+                .font(.system(size: 15))
+                .foregroundStyle(phase == .error ? Color.red.opacity(0.9) : MicAppearance.muted)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(display)
+    }
+}
