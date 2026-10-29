@@ -45,11 +45,36 @@ final class PhoneMic: ObservableObject {
                 : "请粘贴完整配对链接，不能只填 IP 地址"
             return false
         }
-        do { try PairStore.save(p); pairing = p; status = "已配对"; return true }
-        catch { status = error.localizedDescription; return false }
+        do {
+            try PairStore.save(p)
+            pairing = p
+            Self.acknowledge(p)
+            status = "已配对"
+            return true
+        } catch { status = error.localizedDescription; return false }
+    }
+    var pairingKind: PhonePairingKind {
+        PhonePairingPresentation.kind(pairing: pairing, acknowledgedKey: UserDefaults.standard.string(forKey: PhonePairingPresentation.ackDefaultsKey))
+    }
+    var canStart: Bool { PhonePairingPresentation.canStart(pairingKind) }
+    func keepRestoredPairing() {
+        guard let pairing, case .restored = pairingKind else { return }
+        Self.acknowledge(pairing)
+        self.pairing = pairing
+        status = "已配对"
+    }
+    func forgetPairing() {
+        guard !active else { status = "请先停止录音再配对"; return }
+        PairStore.clear()
+        pairing = nil
+        UserDefaults.standard.removeObject(forKey: PhonePairingPresentation.ackDefaultsKey)
+        status = "未连接"
+    }
+    private static func acknowledge(_ pairing: Pairing) {
+        UserDefaults.standard.set(pairing.key, forKey: PhonePairingPresentation.ackDefaultsKey)
     }
     func start() {
-        guard !active, let pairing else { return }
+        guard !active, canStart, let pairing else { return }
         epoch += 1; let generation = epoch; status = "准备连接"
         AVAudioApplication.requestRecordPermission { [weak self] granted in
             DispatchQueue.main.async {
@@ -180,18 +205,26 @@ struct PhoneView: View {
                         level: mic.meter,
                         muted: mic.muted
                     ).padding(.top, 65)
-                    Text({
-                        guard let pairing = mic.pairing, !pairing.host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                            return "连接 Mac"
-                        }
-                        return pairing.name.isEmpty ? "已配对的 Mac" : pairing.name
-                    }())
+                    Text(PhonePairingPresentation.title(mic.pairingKind))
                         .font(.system(size: 28, weight: .semibold)).tracking(-0.6)
                         .padding(.top, 12).lineLimit(2)
-                    if let pairing = mic.pairing, !pairing.host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        .accessibilityLabel(PhonePairingPresentation.title(mic.pairingKind))
+                    if PhonePairingPresentation.showsAddress(mic.pairingKind) {
                         Text(pairedAddress).font(.system(size: 14, design: .monospaced))
                             .foregroundStyle(MicAppearance.muted).textSelection(.enabled)
                             .padding(.top, 8).accessibilityLabel("Mac 地址：\(pairedAddress)")
+                    }
+                    if case .restored = mic.pairingKind {
+                        HStack(spacing: 12) {
+                            Button("继续使用") { mic.keepRestoredPairing() }
+                                .buttonStyle(.borderedProminent).tint(MicAppearance.blue)
+                            Button("忘记") { mic.forgetPairing(); showPairing = true }
+                                .buttonStyle(.bordered)
+                        }
+                        .padding(.top, 14)
+                        Text("这是本机钥匙串里留下的旧配对。确认是你的 Mac 再继续，或忘记后重新扫码。")
+                            .font(.caption).foregroundStyle(MicAppearance.muted)
+                            .padding(.top, 8)
                     }
                     MicWaveform(level: mic.meter, active: mic.active && !mic.muted)
                         .padding(.vertical, 50)
@@ -201,7 +234,7 @@ struct PhoneView: View {
                             .frame(width: 100, height: 100)
                             .background(MicAppearance.gradient, in: Circle())
                             .shadow(color: MicAppearance.blue.opacity(0.15), radius: 12, y: 6)
-                    }.buttonStyle(.plain).disabled(mic.pairing == nil)
+                    }.buttonStyle(.plain).disabled(!mic.canStart)
                         .accessibilityLabel(mic.active ? "停止录音" : "开始录音")
                         .frame(maxWidth: .infinity)
                     Text(mic.active ? "停止" : "开始").font(.system(size: 16))
@@ -217,10 +250,24 @@ struct PhoneView: View {
             .sheet(isPresented: $showPairing) {
                 NavigationStack {
                     Form {
-                        if let pairing = mic.pairing, !pairing.host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        switch mic.pairingKind {
+                        case .paired(let name):
                             Section("当前配对") {
-                                LabeledContent("Mac", value: pairing.name)
+                                LabeledContent("Mac", value: name)
                                 LabeledContent("地址") { Text(pairedAddress).textSelection(.enabled) }
+                                Button("忘记配对", role: .destructive) { mic.forgetPairing() }
+                            }
+                        case .restored(let name):
+                            Section("上次配对（需确认）") {
+                                LabeledContent("Mac", value: name)
+                                LabeledContent("地址") { Text(pairedAddress).textSelection(.enabled) }
+                                Button("继续使用此配对") { mic.keepRestoredPairing() }
+                                Button("忘记并重新配对", role: .destructive) { mic.forgetPairing() }
+                            }
+                        case .unpaired:
+                            Section {
+                                Text("扫码或粘贴 Mac 上的完整配对链接后，才会显示 Mac 名称。")
+                                    .font(.footnote).foregroundStyle(.secondary)
                             }
                         }
                         Button { scanning = true } label: { Label("扫描二维码", systemImage: "qrcode.viewfinder") }

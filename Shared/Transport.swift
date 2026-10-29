@@ -89,6 +89,10 @@ enum PairStore {
         }
         guard status == errSecSuccess else { throw MicError.message("配对保存失败（\(status)）") }
     }
+    static func clear() {
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: "primary"]
+        SecItemDelete(query as CFDictionary)
+    }
 }
 
 func micParameters(_ pairing: Pairing) throws -> NWParameters {
@@ -211,5 +215,52 @@ final class Wire {
             if error != nil { self.close("已断开"); return }
             self.receive()
         }
+    }
+}
+
+
+/// How the phone UI should present a loaded pairing.
+/// UserDefaults ack is wiped on uninstall; Keychain pairing often survives — treat
+/// that as "上次配对" until the user keeps it or pairs again in this install.
+enum PhonePairingKind: Equatable {
+    case unpaired
+    case restored(name: String)
+    case paired(name: String)
+}
+
+enum PhonePairingPresentation {
+    static let unpairedTitle = "未配对 · 扫码连接 Mac"
+    static let ackDefaultsKey = "RemoteMic.pairingAcknowledgedKey"
+
+    static func displayName(for pairing: Pairing) -> String {
+        let name = pairing.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? "Mac" : name
+    }
+
+    static func kind(pairing: Pairing?, acknowledgedKey: String?) -> PhonePairingKind {
+        guard let pairing else { return .unpaired }
+        let host = pairing.host.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !host.isEmpty else { return .unpaired }
+        let name = displayName(for: pairing)
+        if let acknowledgedKey, acknowledgedKey == pairing.key { return .paired(name: name) }
+        return .restored(name: name)
+    }
+
+    static func title(_ kind: PhonePairingKind) -> String {
+        switch kind {
+        case .unpaired: return unpairedTitle
+        case .restored(let name): return "上次配对：\(name)"
+        case .paired(let name): return name
+        }
+    }
+
+    static func showsAddress(_ kind: PhonePairingKind) -> Bool {
+        if case .unpaired = kind { return false }
+        return true
+    }
+
+    static func canStart(_ kind: PhonePairingKind) -> Bool {
+        if case .paired = kind { return true }
+        return false
     }
 }
