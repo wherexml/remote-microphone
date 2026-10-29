@@ -61,6 +61,10 @@ python3 scripts/draft-release.py build/releases/<commit 前 12 位> \
 
 首次正式发布还需完成浏览器下载、隔离属性、拖拽安装、原生启动与配对 / 接收验证，并将证据保存在 `artifacts/`。Apple 公证与编译通过不代表音频或手机签名安装已验收；Intel 包虽包含 x86_64，仍需标明是否做过 Intel 真机验证。
 
+## 0.1.2（6）分发状态（2026-10-29）
+
+iOS 0.1.2（6）已从 `main`（`8670e26`，含 `fix/pairing-qr-status-ux` 的扫码 URL / 配对状态 UX）用 Xcode 27.1 归档并上传 TestFlight，上传成功；二进制声明 `ITSAppUsesNonExemptEncryption=false`。上传后约 26 分钟内未能用 ASC API / 已登录网页确认处理完成，也未能把构建加入 Internal Testing 或 Public Beta（本机缺少 AuthKey.p8，ASC 浏览器未登录）；**未**取消 0.1.1 外部审核。Mac 公证 DMG / GitHub 预发布本次跳过。证据：`artifacts/release-0.1.2/`。
+
 ## 0.1.1（5）分发状态（2026-10-26）
 
 Mac 0.1.1 已完成签名、公证、票据、Gatekeeper 与附件哈希核验，已在 GitHub 发布为 [Pre-release](https://github.com/wherexml/remote-microphone/releases/tag/v0.1.1)，尚未提升为 latest。内置浏览器下载的 DMG 带有系统隔离标记且通过 Gatekeeper；本机安装、启动、地址保存和接收服务启动已验收。Finder 拖拽安装与此次正式标识的完整传声尚未完成，因此保留预发布状态。
