@@ -259,8 +259,13 @@ enum PhonePairingPresentation {
         return true
     }
 
+    /// Restored (Keychain left after uninstall / upgrade before ack exists) can
+    /// still start — blocking start made 0.1.1→0.1.2 upgrades look "unable to
+    /// connect". Banner + 忘记 remain; starting auto-acks in PhoneMic.start.
     static func canStart(_ kind: PhonePairingKind) -> Bool {
-        if case .paired = kind { return true }
-        return false
+        switch kind {
+        case .paired, .restored: return true
+        case .unpaired: return false
+        }
     }
 }

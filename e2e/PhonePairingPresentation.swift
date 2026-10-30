@@ -29,7 +29,7 @@ struct PhonePairingPresentationTests {
         expect("keychain-restore", restored == .restored(name: "Steve's Mac Studio"))
         expect("restore-title", PhonePairingPresentation.title(restored) == "上次配对：Steve's Mac Studio")
         expect("restore-shows-address", PhonePairingPresentation.showsAddress(restored))
-        expect("restore-cannot-start", PhonePairingPresentation.canStart(restored) == false)
+        expect("restore-can-start", PhonePairingPresentation.canStart(restored))
 
         let wrongAck = PhonePairingPresentation.kind(pairing: paired, acknowledgedKey: otherKey)
         expect("wrong-ack-still-restored", wrongAck == .restored(name: "Steve's Mac Studio"))

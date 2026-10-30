@@ -75,6 +75,10 @@ final class PhoneMic: ObservableObject {
     }
     func start() {
         guard !active, canStart, let pairing else { return }
+        if case .restored = pairingKind {
+            Self.acknowledge(pairing)
+            status = "已配对"
+        }
         epoch += 1; let generation = epoch; status = "准备连接"
         AVAudioApplication.requestRecordPermission { [weak self] granted in
             DispatchQueue.main.async {
