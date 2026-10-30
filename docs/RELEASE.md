@@ -61,6 +61,10 @@ python3 scripts/draft-release.py build/releases/<commit 前 12 位> \
 
 首次正式发布还需完成浏览器下载、隔离属性、拖拽安装、原生启动与配对 / 接收验证，并将证据保存在 `artifacts/`。Apple 公证与编译通过不代表音频或手机签名安装已验收；Intel 包虽包含 x86_64，仍需标明是否做过 Intel 真机验证。
 
+## 0.1.2（7）— 2026-10-30
+
+紧急修复：0.1.1→0.1.2 升级后「上次配对」无法点开始（`9b787ac`）。iOS 已 `destination=upload` 上传 TestFlight；ASC 组关联仍需登录/API Key。Mac 本地已换 0.1.2（7）运行，配对 host 为 Tailscale `100.95.36.100`。
+
 ## 0.1.2（6）分发状态（2026-10-29）
 
 iOS 0.1.2（6）已从 `main`（`8670e26`，含 `fix/pairing-qr-status-ux` 的扫码 URL / 配对状态 UX）用 Xcode 27.1 归档并上传 TestFlight，上传成功；二进制声明 `ITSAppUsesNonExemptEncryption=false`。上传后约 26 分钟内未能用 ASC API / 已登录网页确认处理完成，也未能把构建加入 Internal Testing 或 Public Beta（本机缺少 AuthKey.p8，ASC 浏览器未登录）；**未**取消 0.1.1 外部审核。Mac 公证 DMG / GitHub 预发布本次跳过。证据：`artifacts/release-0.1.2/`。
